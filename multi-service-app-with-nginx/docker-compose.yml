@@ -1,0 +1,86 @@
+version: "3.8"
+
+services:
+  # --- FRONTEND --- #
+  frontend:
+    build: ./Frontend_App
+    expose:
+      - "8501"  # Internal port Streamlit runs on
+    networks:
+      - app-network
+
+  # --- BACKUP FRONTEND --- #
+  backup-frontend:
+    build: ./Frontend_App
+    expose:
+      - "8502"
+    networks:
+      - app-network
+
+  # --- ML SERVICE --- #
+  ml-service:
+    build: ./ML_APP
+    volumes:
+      - ./ML_APP:/app
+    expose:
+      - "5000"
+    deploy:
+      replicas: 3
+    networks:
+      - app-network
+
+  backup-ml-service:
+    build: ./ML_APP
+    expose:
+      - "5000"
+    networks:
+      - app-network
+
+  # --- ANALYSIS SERVICE --- #
+  analysis-service:
+    build: ./Analysis_App
+    volumes:
+      - ./Analysis_App:/app
+    expose:
+      - "5050"
+    deploy:
+      replicas: 3
+    networks:
+      - app-network
+
+  backup-analysis-service:
+    build: ./Analysis_App
+    expose:
+      - "5051"
+    networks:
+      - app-network
+
+  # --- LOGGING SERVICE --- #
+  logging-service:
+    build: ./Logs_App
+    expose:
+      - "6000"
+    networks:
+      - app-network
+
+  # --- NGINX --- #
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:80"  # Maps host 8080 to NGINX port 80
+    depends_on:
+      - frontend
+      - backup-frontend
+      - ml-service
+      - backup-ml-service
+      - analysis-service
+      - backup-analysis-service
+      - logging-service
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
